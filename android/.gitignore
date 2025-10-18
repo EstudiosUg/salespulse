@@ -1,0 +1,12 @@
+gradle-wrapper.jar
+/.gradle
+/captures/
+/gradlew
+/gradlew.bat
+/local.properties
+GeneratedPluginRegistrant.java
+
+# Remember to never commit the key.properties file to source control
+key.properties
+*.jks
+*.keystore
