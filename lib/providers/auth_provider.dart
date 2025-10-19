@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
@@ -51,15 +52,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _apiService.setToken(token);
       try {
         // Verify token is still valid by getting current user
-        final user = await _apiService.getCurrentUser();
+        final currentUser = await _apiService.getCurrentUser();
+
         state = AuthState(
-          user: user,
+          user: currentUser,
           token: token,
           isAuthenticated: true,
           isLoading: false,
         );
       } catch (e) {
-        // Token is invalid, clear saved data
+        // Token is invalid or user data corrupted, clear saved data
         await _clearAuth();
       }
     } else {
@@ -76,8 +78,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password: password,
       );
 
+      // Save token and user data as proper JSON
       await _prefs.setString(_tokenKey, authResponse.token);
-      await _prefs.setString(_userKey, authResponse.user.toJson().toString());
+      await _prefs.setString(_userKey, json.encode(authResponse.user.toJson()));
+
+      // Set token in API service for future requests
+      _apiService.setToken(authResponse.token);
 
       state = AuthState(
         user: authResponse.user,

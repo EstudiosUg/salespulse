@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
 import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
@@ -20,6 +21,21 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  String _appVersion = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = ref.watch(themeProvider);
@@ -149,7 +165,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('Version'),
-            subtitle: const Text('1.0.0'),
+            subtitle: Text(_appVersion),
           ),
         ],
       ),
@@ -199,8 +215,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: CircleAvatar(
                     radius: 40,
                     backgroundImage: profile.avatar != null
-                        ? NetworkImage(
-                            'http://192.168.110.151:8000/storage/${profile.avatar}')
+                        ? NetworkImage(ApiConfig.getAvatarUrl(profile.avatar!))
                         : null,
                     backgroundColor: Colors.grey[300],
                     child: profile.avatar == null
@@ -767,9 +782,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       await ref.read(authNotifierProvider.notifier).logout();
       if (mounted) {
-        // Navigate to login screen
+        // Navigate to welcome screen
         Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
+          '/welcome',
           (route) => false,
         );
       }
@@ -967,7 +982,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await Future.delayed(const Duration(milliseconds: 500));
           if (mounted) {
             Navigator.of(context).pushNamedAndRemoveUntil(
-              '/login',
+              '/welcome',
               (route) => false,
             );
           }

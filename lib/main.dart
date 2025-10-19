@@ -9,6 +9,7 @@ import 'screens/sales_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/suppliers_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/permission_request_screen.dart';
 import 'theme/app_theme.dart';
@@ -48,6 +49,7 @@ class MyApp extends ConsumerWidget {
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: const AuthWrapper(),
       routes: {
+        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const MainNavigation(),
       },
@@ -75,7 +77,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Future<void> _checkPermissionsOnce() async {
     final prefs = ref.read(sharedPreferencesProvider);
     final hasChecked = prefs.getBool('permissions_requested') ?? false;
-    
+
     setState(() {
       _permissionsChecked = hasChecked;
     });
@@ -109,11 +111,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       );
     }
 
-    // Show main navigation if authenticated, otherwise show login
+    // Show main navigation if authenticated, otherwise show welcome screen
     if (authState.isAuthenticated) {
       return const MainNavigation();
     } else {
-      return const LoginScreen();
+      return const WelcomeScreen();
     }
   }
 }

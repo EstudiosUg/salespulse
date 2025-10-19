@@ -21,6 +21,7 @@ dependencies:
   open_file: ^3.5.7
   url_launcher: ^6.3.1
   dio: ^5.7.0
+  package_info_plus: ^8.1.2
 
 dev_dependencies:
   flutter_test:
