@@ -333,6 +333,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       maxWidth: 512,
       maxHeight: 512,
       imageQuality: 80,
+      requestFullMetadata:
+          false, // Use Android Photo Picker (no permissions needed on Android 13+)
     );
 
     if (image != null) {
