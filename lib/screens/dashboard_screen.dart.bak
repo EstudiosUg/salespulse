@@ -7,13 +7,13 @@ import '../widgets/month_filter.dart';
 import '../widgets/app_bar.dart';
 import '../widgets/overview_card.dart';
 import '../widgets/snackbar_helper.dart';
-import '../models/sale.dart';
-import '../models/expense.dart';
 import 'transaction_history_screen.dart';
 
 // Cache formatters for better performance
-final _currencyFormatter =
-    NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+final _currencyFormatter = NumberFormat.currency(
+  symbol: 'UGX ',
+  decimalDigits: 0,
+);
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -25,47 +25,15 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   DateTime? _selectedMonth = DateTime.now();
 
-  // Helper method to safely convert API values to double
-  double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
-    return 0.0;
-  }
-
-  // Helper method to safely convert API values to int
-  int _toInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Trigger initial data load for all providers
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(salesNotifierProvider.notifier).loadSales(forceRefresh: true);
-      ref
-          .read(expensesNotifierProvider.notifier)
-          .loadExpenses(forceRefresh: true);
-      // Ensure dashboard loads with the correct month
-      ref.read(dashboardNotifierProvider.notifier).updateMonthYear(
-            _selectedMonth?.month,
-            _selectedMonth?.year,
-          );
-    });
-  }
-
   void _refreshData() {
-    // Refresh all data sources using notifier refresh methods
-    ref.read(salesNotifierProvider.notifier).refresh();
-    ref.read(expensesNotifierProvider.notifier).refresh();
-    ref.read(dashboardNotifierProvider.notifier).refresh();
-    ref.read(unpaidCommissionsNotifierProvider.notifier).refresh();
+    // Only refresh dashboard-specific data, not the full lists
+    // This makes refresh much faster
+    final dashboardParams = {
+      'month': _selectedMonth?.month,
+      'year': _selectedMonth?.year,
+    };
+    ref.invalidate(dashboardOverviewProvider(dashboardParams));
+    ref.invalidate(unpaidCommissionsProvider);
   }
 
   Future<void> _showMarkCommissionPaidDialog(
@@ -85,7 +53,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-                'Are you sure you want to mark all commissions for $supplierName as paid?'),
+              'Are you sure you want to mark all commissions for $supplierName as paid?',
+            ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -192,7 +161,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'Error: $error');
+      SnackbarHelper.showError(context, error);
     }
   }
 
@@ -200,19 +169,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     ref.watch(themeProvider);
     final colorScheme = Theme.of(context).colorScheme;
-    final salesAsync = ref.watch(salesNotifierProvider);
-    final expensesAsync = ref.watch(expensesNotifierProvider);
 
-    // Enhanced dashboard data using StateNotifier providers
-    final dashboardAsync = ref.watch(dashboardNotifierProvider);
-    final unpaidCommissionsAsync = ref.watch(unpaidCommissionsNotifierProvider);
+    // Enhanced dashboard data using new API - no need to load full lists
+    final dashboardParams = {
+      'month': _selectedMonth?.month,
+      'year': _selectedMonth?.year,
+    };
+    final dashboardAsync = ref.watch(
+      dashboardOverviewProvider(dashboardParams),
+    );
+    final unpaidCommissionsAsync = ref.watch(unpaidCommissionsProvider);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: const CustomAppBar(
-        title: 'Dashboard',
-        showBackButton: false,
-      ),
+      appBar: const CustomAppBar(title: 'Dashboard', showBackButton: false),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -223,11 +193,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
               children: [
-                _buildSummaryCards(salesAsync, expensesAsync, dashboardAsync),
+                _buildSummaryCards(dashboardAsync),
                 const SizedBox(height: 32),
                 _buildUnpaidCommissionsSection(unpaidCommissionsAsync),
                 const SizedBox(height: 32),
-                _buildHistorySection(salesAsync, expensesAsync),
+                _buildHistorySection(),
               ],
             ),
           ),
@@ -237,59 +207,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildSummaryCards(
-    AsyncValue<List<Sale>> salesAsync,
-    AsyncValue<List<Expense>> expensesAsync,
     AsyncValue<Map<String, dynamic>> dashboardAsync,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    final startOfMonth = _selectedMonth != null
-        ? DateTime(_selectedMonth!.year, _selectedMonth!.month, 1)
-        : DateTime(2000);
-    final endOfMonth = _selectedMonth != null
-        ? DateTime(_selectedMonth!.year, _selectedMonth!.month + 1, 0)
-        : DateTime.now();
 
-    // Calculate stats based on available data
+    // Use enhanced dashboard data - much faster than loading all records
     double totalSales = 0.0;
     double totalExpenses = 0.0;
     double totalCommission = 0.0;
     int totalProducts = 0;
 
-    // Use dashboard data if available (preferred source)
-    if (dashboardAsync.hasValue && dashboardAsync.value != null) {
-      final dashboardData = dashboardAsync.value!;
-      totalSales = _toDouble(dashboardData['total_sales']);
-      totalExpenses = _toDouble(dashboardData['total_expenses']);
-      totalCommission = _toDouble(dashboardData['commission_paid']);
-      totalProducts = _toInt(dashboardData['total_products']);
-    }
-    // Fallback: calculate from sales and expenses data
-    else if (salesAsync.hasValue && expensesAsync.hasValue) {
-      final sales = salesAsync.value ?? [];
-      final expenses = expensesAsync.value ?? [];
-
-      for (var sale in sales) {
-        if (sale.saleDate
-                .isAfter(startOfMonth.subtract(const Duration(seconds: 1))) &&
-            sale.saleDate
-                .isBefore(endOfMonth.add(const Duration(seconds: 1)))) {
-          totalSales += sale.totalAmount;
-          if (sale.commissionPaid) {
-            totalCommission += sale.commission;
-          }
-          totalProducts += sale.quantity;
-        }
-      }
-
-      for (var expense in expenses) {
-        if (expense.expenseDate
-                .isAfter(startOfMonth.subtract(const Duration(seconds: 1))) &&
-            expense.expenseDate
-                .isBefore(endOfMonth.add(const Duration(seconds: 1)))) {
-          totalExpenses += expense.amount;
-        }
-      }
-    }
+    dashboardAsync.whenData((dashboardData) {
+      totalSales = (dashboardData['total_sales'] ?? 0.0).toDouble();
+      totalExpenses = (dashboardData['total_expenses'] ?? 0.0).toDouble();
+      totalCommission = (dashboardData['commission_paid'] ?? 0.0).toDouble();
+      totalProducts = (dashboardData['total_products'] ?? 0).toInt();
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,11 +244,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 setState(() {
                   _selectedMonth = date;
                 });
-                // Update dashboard data for the new month
-                ref.read(dashboardNotifierProvider.notifier).updateMonthYear(
-                      date?.month,
-                      date?.year,
-                    );
               },
             ),
           ],
@@ -361,17 +289,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildHistorySection(
-    AsyncValue<List<Sale>> salesAsync,
-    AsyncValue<List<Expense>> expensesAsync,
-  ) {
+  Widget _buildHistorySection() {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Transaction History',
+          'Quick Access',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colorScheme.primary,
@@ -392,11 +317,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               _buildHistoryTile(
                 'Sales History',
-                salesAsync.when(
-                  data: (sales) => sales.length,
-                  loading: () => 0,
-                  error: (_, __) => 0,
-                ),
+                null, // Don't show count to avoid loading all data
                 colorScheme.primary,
                 Icons.trending_up_rounded,
                 () {
@@ -410,17 +331,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   );
                 },
               ),
-              Divider(
-                color: colorScheme.outline.withAlpha(25),
-                height: 1,
-              ),
+              Divider(color: colorScheme.outline.withAlpha(25), height: 1),
               _buildHistoryTile(
                 'Expenses History',
-                expensesAsync.when(
-                  data: (expenses) => expenses.length,
-                  loading: () => 0,
-                  error: (_, __) => 0,
-                ),
+                null, // Don't show count to avoid loading all data
                 colorScheme.error,
                 Icons.trending_down_rounded,
                 () {
@@ -443,7 +357,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildHistoryTile(
     String title,
-    int count,
+    int? count, // Made optional to avoid loading all data
     Color color,
     IconData icon,
     VoidCallback onTap,
@@ -476,14 +390,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       color: colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$count transactions',
-                    style: TextStyle(
-                      color: colorScheme.onSurface.withAlpha(179),
-                      fontSize: 11,
+                  if (count != null) const SizedBox(height: 4),
+                  if (count != null)
+                    Text(
+                      '$count transactions',
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withAlpha(179),
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -498,7 +413,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildUnpaidCommissionsSection(
-      AsyncValue<Map<String, dynamic>> unpaidCommissionsAsync) {
+    AsyncValue<Map<String, dynamic>> unpaidCommissionsAsync,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return unpaidCommissionsAsync.when(
@@ -507,7 +423,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         final hasUnpaid = unpaidData['has_unpaid'] ?? false;
         if (!hasUnpaid) return const SizedBox.shrink();
 
-        final totalUnpaid = _toDouble(unpaidData['total_unpaid']);
+        final totalUnpaid = (unpaidData['total_unpaid'] ?? 0.0).toDouble();
         final List unpaidCommissions = unpaidData['unpaid_commissions'] ?? [];
 
         if (unpaidCommissions.isEmpty) return const SizedBox.shrink();
@@ -527,8 +443,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: colorScheme.errorContainer,
                     borderRadius: BorderRadius.circular(16),
@@ -568,8 +486,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       commission['supplier_name'] ?? 'Unknown Supplier';
                   final supplierId = commission['supplier_id'];
                   final totalCommission =
-                      _toDouble(commission['total_commission']);
-                  final salesCount = _toInt(commission['sales_count']);
+                      (commission['total_commission'] ?? 0.0).toDouble();
+                  final salesCount = commission['sales_count'] ?? 0;
 
                   return RepaintBoundary(
                     child: ListTile(

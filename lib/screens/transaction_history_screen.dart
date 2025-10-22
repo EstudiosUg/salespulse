@@ -12,12 +12,15 @@ import '../widgets/generic_detail_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/common_screen_layout.dart';
+import '../utils/error_handler.dart';
 
 enum TransactionType { sales, expenses }
 
 // Cache formatters for better performance
-final _currencyFormatter =
-    NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+final _currencyFormatter = NumberFormat.currency(
+  symbol: 'UGX ',
+  decimalDigits: 0,
+);
 final _dateFormatter = DateFormat.yMMMd();
 
 class TransactionHistoryScreen extends ConsumerStatefulWidget {
@@ -277,9 +280,7 @@ class _TransactionHistoryScreenState
                   ],
                 ),
                 const SizedBox(height: 20),
-                Flexible(
-                  child: _buildMonthGrid(context, now, colorScheme),
-                ),
+                Flexible(child: _buildMonthGrid(context, now, colorScheme)),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -306,7 +307,10 @@ class _TransactionHistoryScreenState
   }
 
   Widget _buildMonthGrid(
-      BuildContext context, DateTime now, ColorScheme colorScheme) {
+    BuildContext context,
+    DateTime now,
+    ColorScheme colorScheme,
+  ) {
     final months = [
       'January',
       'February',
@@ -319,7 +323,7 @@ class _TransactionHistoryScreenState
       'September',
       'October',
       'November',
-      'December'
+      'December',
     ];
 
     return GridView.builder(
@@ -415,16 +419,14 @@ class _TransactionHistoryScreenState
 
         return RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(salesNotifierProvider);
+            ref.read(salesNotifierProvider.notifier).refresh();
           },
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             itemCount: filteredSales.length,
             itemBuilder: (context, index) {
               final sale = filteredSales[index];
-              return RepaintBoundary(
-                child: _buildSaleItem(sale, colorScheme),
-              );
+              return RepaintBoundary(child: _buildSaleItem(sale, colorScheme));
             },
             // Add cache extent for better scrolling
             cacheExtent: 500,
@@ -433,25 +435,24 @@ class _TransactionHistoryScreenState
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: colorScheme.error),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading sales',
-              style: TextStyle(color: colorScheme.error),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSurface.withAlpha(179),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 64,
+                color: colorScheme.error,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                ErrorHandler.getUserFriendlyMessage(error),
+                style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -490,7 +491,7 @@ class _TransactionHistoryScreenState
 
         return RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(expensesNotifierProvider);
+            ref.read(expensesNotifierProvider.notifier).refresh();
           },
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -508,25 +509,24 @@ class _TransactionHistoryScreenState
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: colorScheme.error),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading expenses',
-              style: TextStyle(color: colorScheme.error),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSurface.withAlpha(179),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 64,
+                color: colorScheme.error,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                ErrorHandler.getUserFriendlyMessage(error),
+                style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -549,7 +549,7 @@ class _TransactionHistoryScreenState
       onTap: () => _showSaleDetails(sale),
       onDismissed: () {
         ref.read(salesNotifierProvider.notifier).deleteSale(sale.id);
-        ref.invalidate(unpaidCommissionsProvider);
+        ref.read(unpaidCommissionsNotifierProvider.notifier).refresh();
       },
       dismissConfirmTitle: 'Confirm Delete',
       dismissConfirmMessage: 'Are you sure you want to delete this sale?',
@@ -567,7 +567,7 @@ class _TransactionHistoryScreenState
       onTap: () => _showExpenseDetails(expense),
       onDismissed: () {
         ref.read(expensesNotifierProvider.notifier).deleteExpense(expense.id);
-        ref.invalidate(unpaidCommissionsProvider);
+        ref.read(unpaidCommissionsNotifierProvider.notifier).refresh();
       },
       dismissConfirmTitle: 'Confirm Delete',
       dismissConfirmMessage: 'Are you sure you want to delete this expense?',
@@ -579,14 +579,18 @@ class _TransactionHistoryScreenState
       DetailRow(label: 'Date', value: _dateFormatter.format(sale.saleDate)),
       DetailRow(label: 'Product Name', value: sale.productName),
       DetailRow(
-          label: 'Amount', value: _currencyFormatter.format(sale.totalAmount)),
+        label: 'Amount',
+        value: _currencyFormatter.format(sale.totalAmount),
+      ),
       DetailRow(label: 'Quantity', value: sale.quantity.toString()),
       DetailRow(
-          label: 'Commission',
-          value: _currencyFormatter.format(sale.commission)),
+        label: 'Commission',
+        value: _currencyFormatter.format(sale.commission),
+      ),
       DetailRow(
-          label: 'Commission Status',
-          value: sale.commissionPaid ? 'Paid' : 'Unpaid'),
+        label: 'Commission Status',
+        value: sale.commissionPaid ? 'Paid' : 'Unpaid',
+      ),
       if (sale.supplierName?.isNotEmpty ?? false)
         DetailRow(label: 'Supplier', value: sale.supplierName!),
       if (sale.feedback?.isNotEmpty ?? false)
@@ -613,10 +617,14 @@ class _TransactionHistoryScreenState
   Future<void> _showExpenseDetails(Expense expense) async {
     final details = [
       DetailRow(
-          label: 'Date', value: _dateFormatter.format(expense.expenseDate)),
+        label: 'Date',
+        value: _dateFormatter.format(expense.expenseDate),
+      ),
       DetailRow(label: 'Title', value: expense.title),
       DetailRow(
-          label: 'Amount', value: _currencyFormatter.format(expense.amount)),
+        label: 'Amount',
+        value: _currencyFormatter.format(expense.amount),
+      ),
       if (expense.description?.isNotEmpty ?? false)
         DetailRow(label: 'Description', value: expense.description!),
     ];

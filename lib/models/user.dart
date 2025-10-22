@@ -37,7 +37,8 @@ class User {
       lastName: json['last_name'] ?? '',
       email: json['email'] ?? '',
       phoneNumber: json['phone_number'] ?? '',
-      avatar: json['avatar'],
+      // Use avatar_url if available (full URL), otherwise use avatar (filename)
+      avatar: json['avatar_url'] ?? json['avatar'],
       twoFactorEnabled:
           json['two_factor_enabled'] == 1 || json['two_factor_enabled'] == true,
       isPremium: json['is_premium'] == 1 || json['is_premium'] == true,

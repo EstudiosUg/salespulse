@@ -7,7 +7,6 @@ import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/api_provider.dart';
 import '../models/user.dart';
-import '../config/api_config.dart';
 import '../widgets/common_screen_layout.dart';
 import '../widgets/snackbar_helper.dart';
 import '../services/file_download_service.dart';
@@ -52,24 +51,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             data: (profile) => profile != null
                 ? ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: profile.avatar != null
-                          ? NetworkImage(
-                              ApiConfig.getAvatarUrl(profile.avatar!))
-                          : null,
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: profile.avatar == null
-                          ? Text(
-                              profile.firstName[0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
-                            )
+                      foregroundImage:
+                          profile.avatar != null && profile.avatar!.isNotEmpty
+                              ? NetworkImage(profile.avatar!)
+                              : null,
+                      onForegroundImageError: profile.avatar != null &&
+                              profile.avatar!.isNotEmpty
+                          ? (exception, stackTrace) {
+                              // Log error for debugging
+                              debugPrint('Error loading avatar: $exception');
+                            }
                           : null,
+                      child: Text(
+                        profile.firstName.isNotEmpty
+                            ? profile.firstName[0].toUpperCase()
+                            : profile.email[0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
                     title: Text(profile.fullName),
                     subtitle: Text(profile.email),
                     trailing: profile.isPremium
                         ? Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.amber,
                               borderRadius: BorderRadius.circular(12),
@@ -103,10 +111,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red),
-            ),
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () => _handleLogout(),
           ),
           const Divider(),
@@ -202,6 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) => AlertDialog(
         title: const Text('Account Settings'),
         content: SingleChildScrollView(
@@ -212,24 +218,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 GestureDetector(
                   onTap: () => _pickAndUploadAvatar(),
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundImage: profile.avatar != null
-                        ? NetworkImage(ApiConfig.getAvatarUrl(profile.avatar!))
-                        : null,
-                    backgroundColor: Colors.grey[300],
-                    child: profile.avatar == null
-                        ? const Icon(Icons.person, size: 40)
-                        : null,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.grey[300],
+                        foregroundImage:
+                            profile.avatar != null && profile.avatar!.isNotEmpty
+                                ? NetworkImage(profile.avatar!)
+                                : null,
+                        onForegroundImageError: profile.avatar != null &&
+                                profile.avatar!.isNotEmpty
+                            ? (exception, stackTrace) {
+                                // Log error for debugging
+                                debugPrint('Error loading avatar: $exception');
+                              }
+                            : null,
+                        child: Icon(
+                          Icons.person,
+                          size: 40,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Tap to change avatar',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -324,12 +357,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (context.mounted) {
                     Navigator.pop(context);
                     SnackbarHelper.showSuccess(
-                        context, 'Profile updated successfully');
+                      context,
+                      'Profile updated successfully',
+                    );
                   }
                 } catch (error) {
                   if (context.mounted) {
-                    SnackbarHelper.showError(
-                        context, 'Error updating profile: $error');
+                    SnackbarHelper.showError(context, error);
                   }
                 }
               }
@@ -362,7 +396,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       } catch (error) {
         if (mounted) {
-          SnackbarHelper.showError(context, 'Error uploading avatar: $error');
+          SnackbarHelper.showError(context, error);
         }
       }
     }
@@ -432,8 +466,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.5),
+                        color: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.5,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: startDate != null
@@ -456,8 +491,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               Icons.event_outlined,
                               color: startDate != null
                                   ? colorScheme.primary
-                                  : colorScheme.onSurface
-                                      .withValues(alpha: 0.5),
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.5,
+                                    ),
                               size: 24,
                             ),
                           ),
@@ -470,8 +506,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   'Start Date',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -485,8 +522,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     fontWeight: FontWeight.w600,
                                     color: startDate != null
                                         ? colorScheme.onSurface
-                                        : colorScheme.onSurface
-                                            .withValues(alpha: 0.5),
+                                        : colorScheme.onSurface.withValues(
+                                            alpha: 0.5,
+                                          ),
                                   ),
                                 ),
                               ],
@@ -519,8 +557,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.5),
+                        color: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.5,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: endDate != null
@@ -543,8 +582,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               Icons.event_outlined,
                               color: endDate != null
                                   ? colorScheme.primary
-                                  : colorScheme.onSurface
-                                      .withValues(alpha: 0.5),
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.5,
+                                    ),
                               size: 24,
                             ),
                           ),
@@ -557,8 +597,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   'End Date',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -572,8 +613,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     fontWeight: FontWeight.w600,
                                     color: endDate != null
                                         ? colorScheme.onSurface
-                                        : colorScheme.onSurface
-                                            .withValues(alpha: 0.5),
+                                        : colorScheme.onSurface.withValues(
+                                            alpha: 0.5,
+                                          ),
                                   ),
                                 ),
                               ],
@@ -627,10 +669,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (startDate != null && endDate != null) {
                     Navigator.pop(context);
                     _exportData(
-                        startDate!, endDate!, includeSales, includeExpenses);
+                      startDate!,
+                      endDate!,
+                      includeSales,
+                      includeExpenses,
+                    );
                   } else {
                     SnackbarHelper.showError(
-                        context, 'Please select both start and end dates');
+                      context,
+                      'Please select both start and end dates',
+                    );
                   }
                 },
                 icon: const Icon(Icons.download, size: 20),
@@ -643,8 +691,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _exportData(DateTime startDate, DateTime endDate,
-      bool includeSales, bool includeExpenses) async {
+  Future<void> _exportData(
+    DateTime startDate,
+    DateTime endDate,
+    bool includeSales,
+    bool includeExpenses,
+  ) async {
     // No storage permission needed - using app-specific directories
 
     try {
@@ -669,8 +721,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         'userName': userName,
       };
 
-      final exportResult =
-          await ref.read(exportDataProvider(exportParams).future);
+      final exportResult = await ref.read(
+        exportDataProvider(exportParams).future,
+      );
 
       if (!mounted) return;
 
@@ -725,10 +778,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         });
 
         if (!mounted) return;
-        SnackbarHelper.showSuccess(
-          context,
-          'Downloading export file...',
-        );
+        SnackbarHelper.showSuccess(context, 'Downloading export file...');
       } else if (!emailSent) {
         // No download URL and no email sent
         if (!mounted) return;
@@ -746,63 +796,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
 
       if (!mounted) return;
-      SnackbarHelper.showError(context, 'Error exporting data: $error');
+      SnackbarHelper.showError(context, error);
     }
   }
 
   Future<void> _handleLogout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
+    final confirm = await SnackbarHelper.showConfirmation(
+      context,
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      confirmText: 'Logout',
+      isDangerous: true,
     );
 
-    if (confirm == true) {
+    if (confirm) {
       // Clear all cached data before logout
       ref.invalidate(salesNotifierProvider);
       ref.invalidate(expensesNotifierProvider);
       ref.invalidate(suppliersNotifierProvider);
       ref.invalidate(profileNotifierProvider);
       ref.invalidate(settingsNotifierProvider);
+      ref.invalidate(dashboardNotifierProvider);
+      ref.invalidate(unpaidCommissionsNotifierProvider);
 
       await ref.read(authNotifierProvider.notifier).logout();
       if (mounted) {
         // Navigate to welcome screen
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/welcome',
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/welcome', (route) => false);
       }
     }
   }
 
   Future<void> _refreshData() async {
     try {
-      // Refresh sales and expenses data
-      await ref.read(salesNotifierProvider.notifier).loadSales();
-      await ref.read(expensesNotifierProvider.notifier).loadExpenses();
+      // Refresh all data
+      await ref
+          .read(salesNotifierProvider.notifier)
+          .loadSales(forceRefresh: true);
+      await ref
+          .read(expensesNotifierProvider.notifier)
+          .loadExpenses(forceRefresh: true);
+      await ref
+          .read(suppliersNotifierProvider.notifier)
+          .loadSuppliers(forceRefresh: true);
+      ref.read(dashboardNotifierProvider.notifier).refresh();
+      ref.read(unpaidCommissionsNotifierProvider.notifier).refresh();
 
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'Data refreshed successfully');
       }
     } catch (error) {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error refreshing data: $error');
+        SnackbarHelper.showError(context, error);
       }
     }
   }
@@ -815,6 +862,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) => AlertDialog(
         title: const Text('Change Password'),
         content: Form(
@@ -890,12 +938,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (context.mounted) {
                     Navigator.pop(context);
                     SnackbarHelper.showSuccess(
-                        context, 'Password changed successfully');
+                      context,
+                      'Password changed successfully',
+                    );
                   }
                 } catch (error) {
                   if (context.mounted) {
-                    SnackbarHelper.showError(
-                        context, 'Error changing password: $error');
+                    SnackbarHelper.showError(context, error);
                   }
                 }
               }
@@ -971,6 +1020,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(suppliersNotifierProvider);
         ref.invalidate(profileNotifierProvider);
         ref.invalidate(settingsNotifierProvider);
+        ref.invalidate(dashboardNotifierProvider);
+        ref.invalidate(unpaidCommissionsNotifierProvider);
 
         // Logout user after deletion
         await ref.read(authNotifierProvider.notifier).logout();
@@ -981,16 +1032,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Navigate to login after a short delay
           await Future.delayed(const Duration(milliseconds: 500));
           if (mounted) {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/welcome',
-              (route) => false,
-            );
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/welcome', (route) => false);
           }
         }
       } catch (error) {
         if (mounted) {
-          SnackbarHelper.showError(
-              context, error.toString().replaceAll('Exception: ', ''));
+          SnackbarHelper.showError(context, error);
         }
       }
     }
@@ -1010,7 +1059,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return months[month - 1];
   }

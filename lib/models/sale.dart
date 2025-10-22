@@ -71,6 +71,32 @@ class Sale {
     };
   }
 
+  Sale copyWith({
+    String? id,
+    String? productName,
+    double? price,
+    int? quantity,
+    double? commission,
+    bool? commissionPaid,
+    int? supplierId,
+    String? supplierName,
+    String? feedback,
+    DateTime? saleDate,
+  }) {
+    return Sale(
+      id: id ?? this.id,
+      productName: productName ?? this.productName,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      commission: commission ?? this.commission,
+      commissionPaid: commissionPaid ?? this.commissionPaid,
+      supplierId: supplierId ?? this.supplierId,
+      supplierName: supplierName ?? this.supplierName,
+      feedback: feedback ?? this.feedback,
+      saleDate: saleDate ?? this.saleDate,
+    );
+  }
+
   double get totalAmount => price * quantity;
   double get netEarning => totalAmount - commission;
 }

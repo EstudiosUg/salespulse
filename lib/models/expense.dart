@@ -42,4 +42,20 @@ class Expense {
           expenseDate.toIso8601String().split('T')[0], // Format as YYYY-MM-DD
     };
   }
+
+  Expense copyWith({
+    String? id,
+    String? title,
+    double? amount,
+    String? description,
+    DateTime? expenseDate,
+  }) {
+    return Expense(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      description: description ?? this.description,
+      expenseDate: expenseDate ?? this.expenseDate,
+    );
+  }
 }

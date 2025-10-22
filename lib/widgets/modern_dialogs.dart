@@ -6,11 +6,7 @@ class SectionHeader extends StatelessWidget {
   final String title;
   final IconData? icon;
 
-  const SectionHeader({
-    super.key,
-    required this.title,
-    this.icon,
-  });
+  const SectionHeader({super.key, required this.title, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -72,12 +68,12 @@ class ModernTextField extends StatelessWidget {
         labelText: label,
         prefixIcon: Icon(icon, color: colorScheme.primary),
         suffix: suffix != null
-            ? Text(suffix!,
-                style: TextStyle(color: colorScheme.onSurfaceVariant))
+            ? Text(
+                suffix!,
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              )
             : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest.withAlpha(128),
         enabledBorder: OutlineInputBorder(
@@ -255,10 +251,7 @@ class ModernSwitchTile extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
+          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -289,9 +282,7 @@ class ModernDropdownField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: colorScheme.primary),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest.withAlpha(128),
         enabledBorder: OutlineInputBorder(
@@ -351,11 +342,7 @@ class DialogHeader extends StatelessWidget {
               color: colorScheme.primary,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: colorScheme.onPrimary,
-              size: 24,
-            ),
+            child: Icon(icon, color: colorScheme.onPrimary, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

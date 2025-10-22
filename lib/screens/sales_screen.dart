@@ -8,6 +8,7 @@ import '../widgets/generic_list_item.dart';
 import '../widgets/generic_detail_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/common_screen_layout.dart';
+import '../utils/error_handler.dart';
 import 'package:intl/intl.dart';
 
 class SalesScreen extends ConsumerStatefulWidget {
@@ -45,17 +46,27 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       body: salesAsync.when(
         data: (sales) {
           final monthlySales = sales
-              .where((sale) =>
-                  sale.saleDate.isAfter(
-                      startOfMonth.subtract(const Duration(seconds: 1))) &&
-                  sale.saleDate
-                      .isBefore(endOfMonth.add(const Duration(seconds: 1))))
-              .toList();
+              .where(
+                (sale) =>
+                    sale.saleDate.isAfter(
+                      startOfMonth.subtract(const Duration(seconds: 1)),
+                    ) &&
+                    sale.saleDate.isBefore(
+                      endOfMonth.add(const Duration(seconds: 1)),
+                    ),
+              )
+              .toList()
+            ..sort((a, b) => b.saleDate
+                .compareTo(a.saleDate)); // Sort by date, most recent first
 
           final totalSales = monthlySales.fold<double>(
-              0, (sum, sale) => sum + sale.totalAmount);
+            0,
+            (sum, sale) => sum + sale.totalAmount,
+          );
           final totalCommission = monthlySales.fold<double>(
-              0, (sum, sale) => sum + sale.commission);
+            0,
+            (sum, sale) => sum + sale.commission,
+          );
 
           return SingleChildScrollView(
             child: Column(
@@ -120,17 +131,32 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error loading sales: $error'),
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(salesNotifierProvider.notifier).loadSales();
-                },
-                child: const Text('Retry'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.cloud_off_outlined,
+                  size: 64,
+                  color: colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  ErrorHandler.getUserFriendlyMessage(error),
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(salesNotifierProvider.notifier).loadSales();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Try Again'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -157,7 +183,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       onTap: () => _showSaleDetails(sale),
       onDismissed: () {
         ref.read(salesNotifierProvider.notifier).deleteSale(sale.id);
-        ref.invalidate(unpaidCommissionsProvider);
+        ref.read(unpaidCommissionsNotifierProvider.notifier).refresh();
       },
       dismissConfirmTitle: 'Confirm Delete',
       dismissConfirmMessage: 'Are you sure you want to delete this sale?',
@@ -170,14 +196,18 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       DetailRow(label: 'Product Name', value: sale.productName),
       DetailRow(
         label: 'Amount',
-        value: NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0)
-            .format(sale.totalAmount),
+        value: NumberFormat.currency(
+          symbol: 'UGX ',
+          decimalDigits: 0,
+        ).format(sale.totalAmount),
       ),
       DetailRow(label: 'Quantity', value: sale.quantity.toString()),
       DetailRow(
         label: 'Commission',
-        value: NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0)
-            .format(sale.commission),
+        value: NumberFormat.currency(
+          symbol: 'UGX ',
+          decimalDigits: 0,
+        ).format(sale.commission),
       ),
       DetailRow(
         label: 'Commission Status',

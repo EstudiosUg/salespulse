@@ -28,21 +28,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await ref.read(authNotifierProvider.notifier).login(
-              _loginController.text.trim(),
-              _passwordController.text,
-            );
+        await ref
+            .read(authNotifierProvider.notifier)
+            .login(_loginController.text.trim(), _passwordController.text);
         // Navigate to dashboard after successful login
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/dashboard',
-            (route) => false,
-          );
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/dashboard', (route) => false);
         }
       } catch (e) {
         if (mounted) {
-          SnackbarHelper.showError(
-              context, e.toString().replaceAll('Exception: ', ''));
+          SnackbarHelper.showError(context, e);
         }
       }
     }
@@ -111,19 +108,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await apiService.forgotPassword(emailController.text.trim());
 
         if (mounted) {
-          SnackbarHelper.showSuccess(
-            context,
-            'Reset code sent to your email!',
-          );
+          SnackbarHelper.showSuccess(context, 'Reset code sent to your email!');
           // Show reset password dialog
           _showResetPasswordDialog(emailController.text.trim());
         }
       } catch (e) {
         if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            e.toString().replaceAll('Exception: ', ''),
-          );
+          SnackbarHelper.showError(context, e);
         }
       }
     }
@@ -139,7 +130,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Reset Password'),
@@ -276,10 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       } catch (e) {
         if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            e.toString().replaceAll('Exception: ', ''),
-          );
+          SnackbarHelper.showError(context, e);
         }
       }
     }
@@ -313,19 +300,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Back Button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
                   // Logo/Icon
                   Container(
                     width: 100,

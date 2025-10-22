@@ -32,17 +32,25 @@ final salesNotifierProvider =
 
 class SalesNotifier extends StateNotifier<AsyncValue<List<Sale>>> {
   final ApiService _apiService;
+  bool _isInitialLoadDone = false;
 
-  SalesNotifier(this._apiService) : super(const AsyncValue.loading()) {
-    loadSales();
-  }
+  SalesNotifier(this._apiService) : super(const AsyncValue.data([]));
 
-  Future<void> loadSales() async {
-    state = const AsyncValue.loading();
+  Future<void> loadSales({bool forceRefresh = false}) async {
+    // Skip auto-loading, only load when explicitly called
+    if (!forceRefresh && _isInitialLoadDone) return;
+
+    // Don't show loading state if we already have data (background refresh)
+    if (!state.hasValue || state.value!.isEmpty) {
+      state = const AsyncValue.loading();
+    }
+
     try {
-      final sales = await _apiService.getSales();
+      // Use pagination to load only recent 50 sales for faster performance
+      final sales = await _apiService.getSalesWithFilters(perPage: 50);
       if (mounted) {
         state = AsyncValue.data(sales);
+        _isInitialLoadDone = true;
       }
     } catch (error, stackTrace) {
       if (mounted) {
@@ -53,32 +61,64 @@ class SalesNotifier extends StateNotifier<AsyncValue<List<Sale>>> {
 
   Future<void> addSale(Sale sale) async {
     try {
-      await _apiService.createSale(sale);
-      await loadSales(); // Refresh the list
+      // Optimistic update - add to UI immediately
+      final currentSales = state.value ?? [];
+      final newSale = await _apiService.createSale(sale);
+
+      if (mounted) {
+        // Add the new sale at the beginning of the list
+        state = AsyncValue.data([newSale, ...currentSales]);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Rethrow to let the UI handle the error
+      // Revert on error and reload
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+        await loadSales(forceRefresh: true);
+      }
+      rethrow;
     }
   }
 
   Future<void> updateSale(String id, Sale sale) async {
     try {
-      await _apiService.updateSale(id, sale);
-      await loadSales(); // Refresh the list
+      final updatedSale = await _apiService.updateSale(id, sale);
+
+      if (mounted) {
+        // Update the specific sale in the list
+        final currentSales = state.value ?? [];
+        final updatedList =
+            currentSales.map((s) => s.id == id ? updatedSale : s).toList();
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Rethrow to let the UI handle the error
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+      rethrow;
     }
   }
 
   Future<void> deleteSale(String id) async {
     try {
       await _apiService.deleteSale(id);
-      await loadSales(); // Refresh the list
+
+      if (mounted) {
+        // Remove the sale from the list
+        final currentSales = state.value ?? [];
+        final updatedList = currentSales.where((s) => s.id != id).toList();
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Rethrow to let the UI handle the error
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+      rethrow;
     }
+  }
+
+  // Method to refresh data in background
+  Future<void> refresh() async {
+    await loadSales(forceRefresh: true);
   }
 }
 
@@ -95,17 +135,25 @@ final expensesNotifierProvider =
 
 class ExpensesNotifier extends StateNotifier<AsyncValue<List<Expense>>> {
   final ApiService _apiService;
+  bool _isInitialLoadDone = false;
 
-  ExpensesNotifier(this._apiService) : super(const AsyncValue.loading()) {
-    loadExpenses();
-  }
+  ExpensesNotifier(this._apiService) : super(const AsyncValue.data([]));
 
-  Future<void> loadExpenses() async {
-    state = const AsyncValue.loading();
+  Future<void> loadExpenses({bool forceRefresh = false}) async {
+    // Skip auto-loading, only load when explicitly called
+    if (!forceRefresh && _isInitialLoadDone) return;
+
+    // Don't show loading state if we already have data (background refresh)
+    if (!state.hasValue || state.value!.isEmpty) {
+      state = const AsyncValue.loading();
+    }
+
     try {
-      final expenses = await _apiService.getExpenses();
+      // Use pagination to load only recent 50 expenses for faster performance
+      final expenses = await _apiService.getExpensesWithFilters(perPage: 50);
       if (mounted) {
         state = AsyncValue.data(expenses);
+        _isInitialLoadDone = true;
       }
     } catch (error, stackTrace) {
       if (mounted) {
@@ -116,46 +164,82 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Expense>>> {
 
   Future<void> addExpense(Expense expense) async {
     try {
-      await _apiService.createExpense(expense);
-      await loadExpenses(); // Refresh the list
+      // Optimistic update - add to UI immediately
+      final currentExpenses = state.value ?? [];
+      final newExpense = await _apiService.createExpense(expense);
+
+      if (mounted) {
+        // Add the new expense at the beginning of the list
+        state = AsyncValue.data([newExpense, ...currentExpenses]);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Rethrow to let the UI handle the error
+      // Revert on error and reload
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+        await loadExpenses(forceRefresh: true);
+      }
+      rethrow;
     }
   }
 
   Future<void> updateExpense(String id, Expense expense) async {
     try {
-      await _apiService.updateExpense(id, expense);
-      await loadExpenses(); // Refresh the list
+      final updatedExpense = await _apiService.updateExpense(id, expense);
+
+      if (mounted) {
+        // Update the specific expense in the list
+        final currentExpenses = state.value ?? [];
+        final updatedList = currentExpenses
+            .map((e) => e.id == id ? updatedExpense : e)
+            .toList();
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Rethrow to let the UI handle the error
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+      rethrow;
     }
   }
 
   Future<void> deleteExpense(String id) async {
     try {
       await _apiService.deleteExpense(id);
-      await loadExpenses(); // Refresh the list
+
+      if (mounted) {
+        // Remove the expense from the list
+        final currentExpenses = state.value ?? [];
+        final updatedList = currentExpenses.where((e) => e.id != id).toList();
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Rethrow to let the UI handle the error
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+      rethrow;
     }
+  }
+
+  // Method to refresh data in background
+  Future<void> refresh() async {
+    await loadExpenses(forceRefresh: true);
   }
 }
 
-// Dashboard Provider
+// Dashboard Provider (cached - won't auto-dispose)
 final dashboardProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final apiService = ref.watch(apiServiceProvider);
+  // Keep data in cache to reduce API calls
+  ref.keepAlive();
   return apiService.getDashboardData();
 });
 
-// Enhanced Dashboard Providers
+// Enhanced Dashboard Providers (auto-cached by Riverpod)
 final dashboardOverviewProvider =
     FutureProvider.family<Map<String, dynamic>, Map<String, int?>>(
         (ref, params) async {
   final apiService = ref.watch(apiServiceProvider);
+  // Riverpod automatically caches family providers based on params
   return apiService.getDashboardOverview(
     month: params['month'],
     year: params['year'],
@@ -165,6 +249,8 @@ final dashboardOverviewProvider =
 final unpaidCommissionsProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {
   final apiService = ref.watch(apiServiceProvider);
+  // Keep alive to cache unpaid commissions data
+  ref.keepAlive();
   return apiService.getUnpaidCommissions();
 });
 
@@ -199,17 +285,24 @@ final suppliersNotifierProvider =
 
 class SuppliersNotifier extends StateNotifier<AsyncValue<List<Supplier>>> {
   final ApiService _apiService;
+  bool _isInitialLoadDone = false;
 
-  SuppliersNotifier(this._apiService) : super(const AsyncValue.loading()) {
-    loadSuppliers();
-  }
+  SuppliersNotifier(this._apiService) : super(const AsyncValue.data([]));
 
-  Future<void> loadSuppliers({bool? active}) async {
-    state = const AsyncValue.loading();
+  Future<void> loadSuppliers({bool? active, bool forceRefresh = false}) async {
+    // Skip auto-loading, only load when explicitly called
+    if (!forceRefresh && _isInitialLoadDone) return;
+
+    // Don't show loading state if we already have data (background refresh)
+    if (!state.hasValue || state.value!.isEmpty) {
+      state = const AsyncValue.loading();
+    }
+
     try {
       final suppliers = await _apiService.getSuppliers(active: active);
       if (mounted) {
         state = AsyncValue.data(suppliers);
+        _isInitialLoadDone = true;
       }
     } catch (error, stackTrace) {
       if (mounted) {
@@ -220,29 +313,68 @@ class SuppliersNotifier extends StateNotifier<AsyncValue<List<Supplier>>> {
 
   Future<void> addSupplier(Supplier supplier) async {
     try {
-      await _apiService.createSupplier(supplier);
-      await loadSuppliers(); // Refresh the list
+      // Optimistic update - add to UI immediately
+      final currentSuppliers = state.value ?? [];
+      final newSupplier = await _apiService.createSupplier(supplier);
+
+      if (mounted) {
+        // Add the new supplier to the list (sorted by name)
+        final updatedList = [...currentSuppliers, newSupplier];
+        updatedList.sort((a, b) => a.name.compareTo(b.name));
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      // Revert on error and reload
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+        await loadSuppliers(forceRefresh: true);
+      }
+      rethrow;
     }
   }
 
   Future<void> updateSupplier(int id, Supplier supplier) async {
     try {
-      await _apiService.updateSupplier(id, supplier);
-      await loadSuppliers(); // Refresh the list
+      final updatedSupplier = await _apiService.updateSupplier(id, supplier);
+
+      if (mounted) {
+        // Update the specific supplier in the list
+        final currentSuppliers = state.value ?? [];
+        final updatedList = currentSuppliers
+            .map((s) => s.id == id ? updatedSupplier : s)
+            .toList();
+        updatedList.sort((a, b) => a.name.compareTo(b.name));
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+      rethrow;
     }
   }
 
   Future<void> deleteSupplier(int id) async {
     try {
       await _apiService.deleteSupplier(id);
-      await loadSuppliers(); // Refresh the list
+
+      if (mounted) {
+        // Remove the supplier from the list
+        final currentSuppliers = state.value ?? [];
+        final updatedList = currentSuppliers.where((s) => s.id != id).toList();
+        state = AsyncValue.data(updatedList);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+      rethrow;
     }
+  }
+
+  // Method to refresh data in background
+  Future<void> refresh() async {
+    await loadSuppliers(forceRefresh: true);
   }
 }
 
@@ -390,3 +522,96 @@ final exportDataProvider =
     includeExpenses: params['includeExpenses'],
   );
 });
+
+// Dashboard StateNotifier for auto-loading and refreshing
+final dashboardNotifierProvider =
+    StateNotifierProvider<DashboardNotifier, AsyncValue<Map<String, dynamic>>>(
+        (ref) {
+  return DashboardNotifier(ref.watch(apiServiceProvider));
+});
+
+class DashboardNotifier
+    extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
+  final ApiService _apiService;
+  int? _currentMonth;
+  int? _currentYear;
+
+  DashboardNotifier(this._apiService) : super(const AsyncValue.loading()) {
+    // Auto-load on creation with current month
+    final now = DateTime.now();
+    loadDashboard(month: now.month, year: now.year);
+  }
+
+  Future<void> loadDashboard({int? month, int? year}) async {
+    _currentMonth = month;
+    _currentYear = year;
+
+    // Don't show loading if we already have data (background refresh)
+    if (!state.hasValue || (state.value?.isEmpty ?? true)) {
+      state = const AsyncValue.loading();
+    }
+
+    try {
+      final data = await _apiService.getDashboardOverview(
+        month: month,
+        year: year,
+      );
+
+      if (mounted) {
+        state = AsyncValue.data(data);
+      }
+    } catch (error, stackTrace) {
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+    }
+  }
+
+  Future<void> refresh() async {
+    await loadDashboard(month: _currentMonth, year: _currentYear);
+  }
+
+  void updateMonthYear(int? month, int? year) {
+    loadDashboard(month: month, year: year);
+  }
+}
+
+// Unpaid Commissions StateNotifier
+final unpaidCommissionsNotifierProvider = StateNotifierProvider<
+    UnpaidCommissionsNotifier, AsyncValue<Map<String, dynamic>>>((ref) {
+  return UnpaidCommissionsNotifier(ref.watch(apiServiceProvider));
+});
+
+class UnpaidCommissionsNotifier
+    extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
+  final ApiService _apiService;
+
+  UnpaidCommissionsNotifier(this._apiService)
+      : super(const AsyncValue.loading()) {
+    // Auto-load on creation
+    loadUnpaidCommissions();
+  }
+
+  Future<void> loadUnpaidCommissions() async {
+    // Don't show loading if we already have data
+    if (!state.hasValue || (state.value?.isEmpty ?? true)) {
+      state = const AsyncValue.loading();
+    }
+
+    try {
+      final data = await _apiService.getUnpaidCommissions();
+
+      if (mounted) {
+        state = AsyncValue.data(data);
+      }
+    } catch (error, stackTrace) {
+      if (mounted) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+    }
+  }
+
+  Future<void> refresh() async {
+    await loadUnpaidCommissions();
+  }
+}

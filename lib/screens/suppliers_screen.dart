@@ -5,6 +5,7 @@ import '../providers/api_provider.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/generic_list_item.dart';
 import '../widgets/common_screen_layout.dart';
+import '../utils/error_handler.dart';
 
 class SuppliersScreen extends ConsumerStatefulWidget {
   const SuppliersScreen({super.key});
@@ -66,10 +67,9 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
       builder: (context) => _SupplierFormDialog(
         supplier: supplier,
         onSave: (updatedSupplier) {
-          ref.read(suppliersNotifierProvider.notifier).updateSupplier(
-                supplier.id,
-                updatedSupplier,
-              );
+          ref
+              .read(suppliersNotifierProvider.notifier)
+              .updateSupplier(supplier.id, updatedSupplier);
         },
       ),
     );
@@ -99,7 +99,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
 
     return CommonScreenLayout(
       title: 'Suppliers',
-      showBackButton: true,
+      showBackButton: false,
       actions: [
         IconButton(
           onPressed: _toggleActiveFilter,
@@ -141,7 +141,8 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                   children: [
                     FilterChip(
                       label: Text(
-                          _showActiveOnly ? 'Active Only' : 'All Suppliers'),
+                        _showActiveOnly ? 'Active Only' : 'All Suppliers',
+                      ),
                       selected: _showActiveOnly,
                       onSelected: (_) => _toggleActiveFilter(),
                       avatar: Icon(
@@ -224,45 +225,39 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                   },
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load suppliers',
-                      style: TextStyle(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_off_outlined,
+                        size: 64,
                         color: colorScheme.error,
-                        fontSize: 14,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: TextStyle(
-                        color: colorScheme.onSurface.withAlpha(128),
-                        fontSize: 12,
+                      const SizedBox(height: 16),
+                      Text(
+                        ErrorHandler.getUserFriendlyMessage(error),
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 16,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        ref
-                            .read(suppliersNotifierProvider.notifier)
-                            .loadSuppliers(active: _showActiveOnly);
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          ref
+                              .read(suppliersNotifierProvider.notifier)
+                              .loadSuppliers(active: _showActiveOnly);
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -277,10 +272,7 @@ class _SupplierFormDialog extends StatefulWidget {
   final Supplier? supplier;
   final Function(Supplier) onSave;
 
-  const _SupplierFormDialog({
-    this.supplier,
-    required this.onSave,
-  });
+  const _SupplierFormDialog({this.supplier, required this.onSave});
 
   @override
   State<_SupplierFormDialog> createState() => _SupplierFormDialogState();
@@ -379,8 +371,9 @@ class _SupplierFormDialogState extends State<_SupplierFormDialog> {
                 const SizedBox(height: 16),
                 SwitchListTile(
                   title: const Text('Active'),
-                  subtitle:
-                      const Text('Active suppliers can be selected in sales'),
+                  subtitle: const Text(
+                    'Active suppliers can be selected in sales',
+                  ),
                   value: _isActive,
                   onChanged: (value) {
                     setState(() {

@@ -5,6 +5,7 @@ import '../widgets/summary_card.dart';
 import '../widgets/snackbar_helper.dart';
 import '../widgets/common_screen_layout.dart';
 import '../models/expense.dart';
+import '../utils/error_handler.dart';
 import 'package:intl/intl.dart';
 
 class ExpensesScreen extends ConsumerStatefulWidget {
@@ -42,15 +43,23 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       body: expensesAsync.when(
         data: (expenses) {
           final monthlyExpenses = expenses
-              .where((expense) =>
-                  expense.expenseDate.isAfter(
-                      startOfMonth.subtract(const Duration(seconds: 1))) &&
-                  expense.expenseDate
-                      .isBefore(endOfMonth.add(const Duration(seconds: 1))))
-              .toList();
+              .where(
+                (expense) =>
+                    expense.expenseDate.isAfter(
+                      startOfMonth.subtract(const Duration(seconds: 1)),
+                    ) &&
+                    expense.expenseDate.isBefore(
+                      endOfMonth.add(const Duration(seconds: 1)),
+                    ),
+              )
+              .toList()
+            ..sort((a, b) => b.expenseDate
+                .compareTo(a.expenseDate)); // Sort by date, most recent first
 
           final totalExpenses = monthlyExpenses.fold<double>(
-              0, (sum, expense) => sum + expense.amount);
+            0,
+            (sum, expense) => sum + expense.amount,
+          );
 
           return SingleChildScrollView(
             child: Column(
@@ -112,17 +121,29 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error loading expenses: $error'),
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(expensesNotifierProvider.notifier).loadExpenses();
-                },
-                child: const Text('Retry'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.cloud_off_outlined,
+                    size: 64, color: colorScheme.error),
+                const SizedBox(height: 16),
+                Text(
+                  ErrorHandler.getUserFriendlyMessage(error),
+                  style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(expensesNotifierProvider.notifier).loadExpenses();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Try Again'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -136,38 +157,24 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         key: Key(expense.id),
         direction: DismissDirection.endToStart,
         confirmDismiss: (direction) async {
-          return await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Confirm Delete'),
-              content:
-                  const Text('Are you sure you want to delete this expense?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Delete'),
-                ),
-              ],
-            ),
+          return await SnackbarHelper.showConfirmation(
+            context,
+            title: 'Confirm Delete',
+            message: 'Are you sure you want to delete this expense?',
+            confirmText: 'Delete',
+            isDangerous: true,
           );
         },
         onDismissed: (direction) {
           ref.read(expensesNotifierProvider.notifier).deleteExpense(expense.id);
-          // Invalidate dashboard providers to refresh dashboard data
-          ref.invalidate(unpaidCommissionsProvider);
+          // Refresh dashboard providers
+          ref.read(unpaidCommissionsNotifierProvider.notifier).refresh();
         },
         background: Container(
           color: colorScheme.error,
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
-          child: Icon(
-            Icons.delete,
-            color: colorScheme.onError,
-          ),
+          child: Icon(Icons.delete, color: colorScheme.onError),
         ),
         child: ListTile(
           onTap: () => _showExpenseDetails(expense),
@@ -177,10 +184,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               color: colorScheme.error.withAlpha(25),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.trending_down_rounded,
-              color: colorScheme.error,
-            ),
+            child: Icon(Icons.trending_down_rounded, color: colorScheme.error),
           ),
           title: Text(
             expense.title,
@@ -228,12 +232,17 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildDetailRow(
-                  'Date', DateFormat.yMMMd().format(expense.expenseDate)),
+                'Date',
+                DateFormat.yMMMd().format(expense.expenseDate),
+              ),
               _buildDetailRow('Title', expense.title),
               _buildDetailRow(
-                  'Amount',
-                  NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0)
-                      .format(expense.amount)),
+                'Amount',
+                NumberFormat.currency(
+                  symbol: 'UGX ',
+                  decimalDigits: 0,
+                ).format(expense.amount),
+              ),
               if (expense.description?.isNotEmpty ?? false)
                 _buildDetailRow('Description', expense.description!),
             ],
@@ -266,18 +275,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 12))),
         ],
       ),
     );
@@ -392,17 +393,20 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         .read(expensesNotifierProvider.notifier)
                         .addExpense(expense);
 
-                    // Invalidate dashboard providers to refresh dashboard data
-                    ref.invalidate(unpaidCommissionsProvider);
+                    // Refresh dashboard providers
+                    ref
+                        .read(unpaidCommissionsNotifierProvider.notifier)
+                        .refresh();
 
                     if (context.mounted) {
                       SnackbarHelper.showSuccess(
-                          context, 'Expense added successfully');
+                        context,
+                        'Expense added successfully',
+                      );
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      SnackbarHelper.showError(
-                          context, 'Error adding expense: $e');
+                      SnackbarHelper.showError(context, e);
                     }
                   }
                 }
@@ -418,10 +422,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   Future<void> _showEditDialog(Expense expense) async {
     final formKey = GlobalKey<FormState>();
     final titleController = TextEditingController(text: expense.title);
-    final amountController =
-        TextEditingController(text: expense.amount.toString());
-    final descriptionController =
-        TextEditingController(text: expense.description ?? '');
+    final amountController = TextEditingController(
+      text: expense.amount.toString(),
+    );
+    final descriptionController = TextEditingController(
+      text: expense.description ?? '',
+    );
     DateTime selectedDate = expense.expenseDate;
 
     await showDialog(
@@ -526,17 +532,20 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         .read(expensesNotifierProvider.notifier)
                         .updateExpense(expense.id, updatedExpense);
 
-                    // Invalidate dashboard providers to refresh dashboard data
-                    ref.invalidate(unpaidCommissionsProvider);
+                    // Refresh dashboard providers
+                    ref
+                        .read(unpaidCommissionsNotifierProvider.notifier)
+                        .refresh();
 
                     if (context.mounted) {
                       SnackbarHelper.showSuccess(
-                          context, 'Expense updated successfully');
+                        context,
+                        'Expense updated successfully',
+                      );
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      SnackbarHelper.showError(
-                          context, 'Error updating expense: $e');
+                      SnackbarHelper.showError(context, e);
                     }
                   }
                 }

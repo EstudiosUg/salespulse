@@ -51,4 +51,24 @@ class Supplier {
       'is_active': isActive,
     };
   }
+
+  Supplier copyWith({
+    int? id,
+    String? name,
+    String? email,
+    String? phone,
+    String? address,
+    String? notes,
+    bool? isActive,
+  }) {
+    return Supplier(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
+      notes: notes ?? this.notes,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 }

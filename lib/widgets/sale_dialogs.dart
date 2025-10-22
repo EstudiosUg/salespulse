@@ -6,7 +6,9 @@ import 'modern_dialogs.dart';
 import 'snackbar_helper.dart';
 
 Future<void> showModernAddSaleDialog(
-    BuildContext context, WidgetRef ref) async {
+  BuildContext context,
+  WidgetRef ref,
+) async {
   final formKey = GlobalKey<FormState>();
   final productController = TextEditingController();
   final priceController = TextEditingController();
@@ -69,45 +71,37 @@ Future<void> showModernAddSaleDialog(
                           title: 'Financial Details',
                           icon: Icons.attach_money,
                         ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ModernTextField(
-                                controller: priceController,
-                                label: 'Price',
-                                icon: Icons.payments_outlined,
-                                keyboardType: TextInputType.number,
-                                suffix: 'UGX',
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  if (double.tryParse(value) == null) {
-                                    return 'Invalid';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ModernTextField(
-                                controller: quantityController,
-                                label: 'Quantity',
-                                icon: Icons.numbers,
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  if (int.tryParse(value) == null) {
-                                    return 'Invalid';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
+                        ModernTextField(
+                          controller: priceController,
+                          label: 'Total Amount',
+                          icon: Icons.payments_outlined,
+                          keyboardType: TextInputType.number,
+                          suffix: 'UGX',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter total amount';
+                            }
+                            if (double.tryParse(value) == null) {
+                              return 'Please enter a valid number';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        ModernTextField(
+                          controller: quantityController,
+                          label: 'Quantity',
+                          icon: Icons.numbers,
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter quantity';
+                            }
+                            if (int.tryParse(value) == null) {
+                              return 'Please enter a valid number';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         ModernTextField(
@@ -132,72 +126,35 @@ Future<void> showModernAddSaleDialog(
                           title: 'Additional Information',
                           icon: Icons.info_outline,
                         ),
-                        suppliersAsync.when(
-                          data: (suppliers) {
-                            return InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: 'Supplier (Optional)',
-                                prefixIcon: Icon(Icons.business,
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest
-                                    .withAlpha(128),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline
-                                          .withAlpha(77)),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
-                                ),
+                        if (suppliersAsync.hasValue)
+                          DropdownButtonFormField<int?>(
+                            initialValue: selectedSupplierId,
+                            decoration: const InputDecoration(
+                              labelText: 'Supplier (Optional)',
+                            ),
+                            items: [
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('No Supplier'),
                               ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<int?>(
-                                  value: selectedSupplierId,
-                                  isExpanded: true,
-                                  items: [
-                                    const DropdownMenuItem<int?>(
-                                      value: null,
-                                      child: Text('No Supplier'),
-                                    ),
-                                    ...suppliers.map((supplier) {
-                                      return DropdownMenuItem<int?>(
-                                        value: supplier.id,
-                                        child: Text(supplier.name),
-                                      );
-                                    }),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedSupplierId = value;
-                                      selectedSupplierName = value == null
-                                          ? null
-                                          : suppliers
-                                              .firstWhere((s) => s.id == value)
-                                              .name;
-                                    });
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          loading: () => const LinearProgressIndicator(),
-                          error: (_, __) =>
-                              const Text('Error loading suppliers'),
-                        ),
+                              ...suppliersAsync.value!.map((supplier) {
+                                return DropdownMenuItem<int?>(
+                                  value: supplier.id,
+                                  child: Text(supplier.name),
+                                );
+                              }),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                selectedSupplierId = value;
+                                selectedSupplierName = value == null
+                                    ? null
+                                    : suppliersAsync.value!
+                                        .firstWhere((s) => s.id == value)
+                                        .name;
+                              });
+                            },
+                          ),
                         const SizedBox(height: 16),
                         ModernTextField(
                           controller: feedbackController,
@@ -214,14 +171,12 @@ Future<void> showModernAddSaleDialog(
                           label: 'Sale Date',
                         ),
                         const SizedBox(height: 16),
-                        ModernSwitchTile(
-                          title: 'Commission Paid',
-                          subtitle: 'Mark if commission has been paid',
+                        SwitchListTile(
+                          title: const Text('Commission Paid'),
                           value: isCommissionPaid,
                           onChanged: (value) {
                             setState(() => isCommissionPaid = value);
                           },
-                          icon: Icons.check_circle_outline,
                         ),
                       ],
                     ),
@@ -237,8 +192,9 @@ Future<void> showModernAddSaleDialog(
                     try {
                       final price = double.parse(priceController.text);
                       final quantity = int.parse(quantityController.text);
-                      final commission =
-                          double.parse(commissionController.text);
+                      final commission = double.parse(
+                        commissionController.text,
+                      );
 
                       final sale = Sale(
                         id: '',
@@ -258,17 +214,21 @@ Future<void> showModernAddSaleDialog(
                       await ref
                           .read(salesNotifierProvider.notifier)
                           .addSale(sale);
-                      ref.invalidate(unpaidCommissionsProvider);
+                      ref
+                          .read(unpaidCommissionsNotifierProvider.notifier)
+                          .refresh();
 
                       if (context.mounted) {
                         Navigator.pop(context);
                         SnackbarHelper.showSuccess(
-                            context, 'Sale added successfully');
+                          context,
+                          'Sale added successfully',
+                        );
                       }
                     } catch (e) {
                       setState(() => isSaving = false);
                       if (context.mounted) {
-                        SnackbarHelper.showError(context, 'Error: $e');
+                        SnackbarHelper.showError(context, e);
                       }
                     }
                   }
@@ -285,14 +245,19 @@ Future<void> showModernAddSaleDialog(
 }
 
 Future<void> showModernEditSaleDialog(
-    BuildContext context, WidgetRef ref, Sale sale) async {
+  BuildContext context,
+  WidgetRef ref,
+  Sale sale,
+) async {
   final formKey = GlobalKey<FormState>();
   final productController = TextEditingController(text: sale.productName);
   final priceController = TextEditingController(text: sale.price.toString());
-  final quantityController =
-      TextEditingController(text: sale.quantity.toString());
-  final commissionController =
-      TextEditingController(text: sale.commission.toString());
+  final quantityController = TextEditingController(
+    text: sale.quantity.toString(),
+  );
+  final commissionController = TextEditingController(
+    text: sale.commission.toString(),
+  );
   final feedbackController = TextEditingController(text: sale.feedback ?? '');
   DateTime selectedDate = sale.saleDate;
   bool isCommissionPaid = sale.commissionPaid;
@@ -350,45 +315,37 @@ Future<void> showModernEditSaleDialog(
                           title: 'Financial Details',
                           icon: Icons.attach_money,
                         ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ModernTextField(
-                                controller: priceController,
-                                label: 'Price',
-                                icon: Icons.payments_outlined,
-                                keyboardType: TextInputType.number,
-                                suffix: 'UGX',
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  if (double.tryParse(value) == null) {
-                                    return 'Invalid';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ModernTextField(
-                                controller: quantityController,
-                                label: 'Quantity',
-                                icon: Icons.numbers,
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Required';
-                                  }
-                                  if (int.tryParse(value) == null) {
-                                    return 'Invalid';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
+                        ModernTextField(
+                          controller: priceController,
+                          label: 'Total Amount',
+                          icon: Icons.payments_outlined,
+                          keyboardType: TextInputType.number,
+                          suffix: 'UGX',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter total amount';
+                            }
+                            if (double.tryParse(value) == null) {
+                              return 'Please enter a valid number';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        ModernTextField(
+                          controller: quantityController,
+                          label: 'Quantity',
+                          icon: Icons.numbers,
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter quantity';
+                            }
+                            if (int.tryParse(value) == null) {
+                              return 'Please enter a valid number';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         ModernTextField(
@@ -413,72 +370,35 @@ Future<void> showModernEditSaleDialog(
                           title: 'Additional Information',
                           icon: Icons.info_outline,
                         ),
-                        suppliersAsync.when(
-                          data: (suppliers) {
-                            return InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: 'Supplier (Optional)',
-                                prefixIcon: Icon(Icons.business,
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest
-                                    .withAlpha(128),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline
-                                          .withAlpha(77)),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
-                                ),
+                        if (suppliersAsync.hasValue)
+                          DropdownButtonFormField<int?>(
+                            initialValue: selectedSupplierId,
+                            decoration: const InputDecoration(
+                              labelText: 'Supplier (Optional)',
+                            ),
+                            items: [
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('No Supplier'),
                               ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<int?>(
-                                  value: selectedSupplierId,
-                                  isExpanded: true,
-                                  items: [
-                                    const DropdownMenuItem<int?>(
-                                      value: null,
-                                      child: Text('No Supplier'),
-                                    ),
-                                    ...suppliers.map((supplier) {
-                                      return DropdownMenuItem<int?>(
-                                        value: supplier.id,
-                                        child: Text(supplier.name),
-                                      );
-                                    }),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedSupplierId = value;
-                                      selectedSupplierName = value == null
-                                          ? null
-                                          : suppliers
-                                              .firstWhere((s) => s.id == value)
-                                              .name;
-                                    });
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          loading: () => const LinearProgressIndicator(),
-                          error: (_, __) =>
-                              const Text('Error loading suppliers'),
-                        ),
+                              ...suppliersAsync.value!.map((supplier) {
+                                return DropdownMenuItem<int?>(
+                                  value: supplier.id,
+                                  child: Text(supplier.name),
+                                );
+                              }),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                selectedSupplierId = value;
+                                selectedSupplierName = value == null
+                                    ? null
+                                    : suppliersAsync.value!
+                                        .firstWhere((s) => s.id == value)
+                                        .name;
+                              });
+                            },
+                          ),
                         const SizedBox(height: 16),
                         ModernTextField(
                           controller: feedbackController,
@@ -495,14 +415,12 @@ Future<void> showModernEditSaleDialog(
                           label: 'Sale Date',
                         ),
                         const SizedBox(height: 16),
-                        ModernSwitchTile(
-                          title: 'Commission Paid',
-                          subtitle: 'Mark if commission has been paid',
+                        SwitchListTile(
+                          title: const Text('Commission Paid'),
                           value: isCommissionPaid,
                           onChanged: (value) {
                             setState(() => isCommissionPaid = value);
                           },
-                          icon: Icons.check_circle_outline,
                         ),
                       ],
                     ),
@@ -518,8 +436,9 @@ Future<void> showModernEditSaleDialog(
                     try {
                       final price = double.parse(priceController.text);
                       final quantity = int.parse(quantityController.text);
-                      final commission =
-                          double.parse(commissionController.text);
+                      final commission = double.parse(
+                        commissionController.text,
+                      );
 
                       final updatedSale = Sale(
                         id: sale.id,
@@ -539,17 +458,21 @@ Future<void> showModernEditSaleDialog(
                       await ref
                           .read(salesNotifierProvider.notifier)
                           .updateSale(sale.id, updatedSale);
-                      ref.invalidate(unpaidCommissionsProvider);
+                      ref
+                          .read(unpaidCommissionsNotifierProvider.notifier)
+                          .refresh();
 
                       if (context.mounted) {
                         Navigator.pop(context);
                         SnackbarHelper.showSuccess(
-                            context, 'Sale updated successfully');
+                          context,
+                          'Sale updated successfully',
+                        );
                       }
                     } catch (e) {
                       setState(() => isSaving = false);
                       if (context.mounted) {
-                        SnackbarHelper.showError(context, 'Error: $e');
+                        SnackbarHelper.showError(context, e);
                       }
                     }
                   }

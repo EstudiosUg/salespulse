@@ -6,7 +6,9 @@ import 'modern_dialogs.dart';
 import 'snackbar_helper.dart';
 
 Future<void> showModernAddExpenseDialog(
-    BuildContext context, WidgetRef ref) async {
+  BuildContext context,
+  WidgetRef ref,
+) async {
   final formKey = GlobalKey<FormState>();
   final titleController = TextEditingController();
   final amountController = TextEditingController();
@@ -129,12 +131,14 @@ Future<void> showModernAddExpenseDialog(
                       if (context.mounted) {
                         Navigator.pop(context);
                         SnackbarHelper.showSuccess(
-                            context, 'Expense added successfully');
+                          context,
+                          'Expense added successfully',
+                        );
                       }
                     } catch (e) {
                       setState(() => isSaving = false);
                       if (context.mounted) {
-                        SnackbarHelper.showError(context, 'Error: $e');
+                        SnackbarHelper.showError(context, e);
                       }
                     }
                   }
@@ -151,13 +155,18 @@ Future<void> showModernAddExpenseDialog(
 }
 
 Future<void> showModernEditExpenseDialog(
-    BuildContext context, WidgetRef ref, Expense expense) async {
+  BuildContext context,
+  WidgetRef ref,
+  Expense expense,
+) async {
   final formKey = GlobalKey<FormState>();
   final titleController = TextEditingController(text: expense.title);
-  final amountController =
-      TextEditingController(text: expense.amount.toString());
-  final descriptionController =
-      TextEditingController(text: expense.description ?? '');
+  final amountController = TextEditingController(
+    text: expense.amount.toString(),
+  );
+  final descriptionController = TextEditingController(
+    text: expense.description ?? '',
+  );
   DateTime selectedDate = expense.expenseDate;
   bool isSaving = false;
 
@@ -276,12 +285,14 @@ Future<void> showModernEditExpenseDialog(
                       if (context.mounted) {
                         Navigator.pop(context);
                         SnackbarHelper.showSuccess(
-                            context, 'Expense updated successfully');
+                          context,
+                          'Expense updated successfully',
+                        );
                       }
                     } catch (e) {
                       setState(() => isSaving = false);
                       if (context.mounted) {
-                        SnackbarHelper.showError(context, 'Error: $e');
+                        SnackbarHelper.showError(context, e);
                       }
                     }
                   }

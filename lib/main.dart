@@ -9,12 +9,14 @@ import 'screens/sales_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/suppliers_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/permission_request_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/bottom_nav.dart';
 import 'services/notification_service.dart';
+import 'services/permission_service.dart';
+import 'services/local_storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,11 +27,12 @@ void main() async {
   // Initialize notification service
   await NotificationService.initialize();
 
+  // Initialize local storage (Hive) for offline support
+  await LocalStorageService.initialize();
+
   runApp(
     ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: const MyApp(),
     ),
   );
@@ -49,6 +52,7 @@ class MyApp extends ConsumerWidget {
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: const AuthWrapper(),
       routes: {
+        '/onboarding': (context) => const OnboardingScreen(),
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const MainNavigation(),
@@ -66,53 +70,55 @@ class AuthWrapper extends ConsumerStatefulWidget {
 }
 
 class _AuthWrapperState extends ConsumerState<AuthWrapper> {
-  bool _permissionsChecked = false;
+  bool _onboardingCompleted = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkPermissionsOnce();
+    _checkFirstLaunch();
   }
 
-  Future<void> _checkPermissionsOnce() async {
+  Future<void> _checkFirstLaunch() async {
     final prefs = ref.read(sharedPreferencesProvider);
-    final hasChecked = prefs.getBool('permissions_requested') ?? false;
+    final hasCompletedOnboarding =
+        prefs.getBool('onboarding_completed') ?? false;
 
     setState(() {
-      _permissionsChecked = hasChecked;
+      _onboardingCompleted = hasCompletedOnboarding;
+      _isLoading = false;
     });
   }
 
-  void _onPermissionsComplete() {
+  Future<void> _requestPermissionsInBackground() async {
     final prefs = ref.read(sharedPreferencesProvider);
-    prefs.setBool('permissions_requested', true);
-    setState(() {
-      _permissionsChecked = true;
-    });
+    final hasRequested = prefs.getBool('permissions_requested') ?? false;
+
+    if (!hasRequested) {
+      // Request permissions silently in the background
+      await PermissionService.requestInitialPermissions();
+      await prefs.setBool('permissions_requested', true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
 
-    // Show loading while checking auth
-    if (authState.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+    // Show loading while checking auth and onboarding status
+    if (authState.isLoading || _isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Show permission request screen if not checked yet and authenticated
-    if (authState.isAuthenticated && !_permissionsChecked) {
-      return PermissionRequestScreen(
-        onComplete: _onPermissionsComplete,
-      );
+    // Show onboarding if not completed (first time user)
+    if (!_onboardingCompleted && !authState.isAuthenticated) {
+      return const OnboardingScreen();
     }
 
     // Show main navigation if authenticated, otherwise show welcome screen
     if (authState.isAuthenticated) {
+      // Request permissions in background when user is authenticated
+      _requestPermissionsInBackground();
       return const MainNavigation();
     } else {
       return const WelcomeScreen();
@@ -136,10 +142,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   @override
   void initState() {
     super.initState();
-    // Pre-load data for initial screen (Dashboard)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadDataForScreen(3);
-    });
+    // Don't pre-load any data - let screens load their own data when needed
+    // This makes initial login much faster
   }
 
   void _loadDataForScreen(int index) {
@@ -148,21 +152,23 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
 
     _loadedScreens.add(index);
 
-    // Load data based on screen
+    // Load data based on screen - only when user navigates to it
     switch (index) {
       case 0: // Sales screen
-        ref.read(salesNotifierProvider.notifier).loadSales();
+        ref.read(salesNotifierProvider.notifier).loadSales(forceRefresh: true);
         break;
       case 1: // Expenses screen
-        ref.read(expensesNotifierProvider.notifier).loadExpenses();
+        ref
+            .read(expensesNotifierProvider.notifier)
+            .loadExpenses(forceRefresh: true);
         break;
       case 2: // Suppliers screen
-        ref.read(suppliersNotifierProvider.notifier).loadSuppliers();
+        ref
+            .read(suppliersNotifierProvider.notifier)
+            .loadSuppliers(forceRefresh: true);
         break;
-      case 3: // Dashboard screen (loads all data)
-        ref.read(salesNotifierProvider.notifier).loadSales();
-        ref.read(expensesNotifierProvider.notifier).loadExpenses();
-        ref.read(suppliersNotifierProvider.notifier).loadSuppliers();
+      case 3: // Dashboard screen - only load when viewed
+        // Dashboard will load its own summary data, not the full lists
         break;
     }
   }
