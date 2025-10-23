@@ -89,7 +89,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: SummaryCard(
-                          title: 'Total Commission',
+                          title: 'Total Profit',
                           amount: totalCommission,
                           icon: Icons.percent,
                           color: colorScheme.tertiary,
@@ -168,7 +168,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       title: sale.productName,
       subtitle: DateFormat.yMMMd().format(sale.saleDate),
       secondarySubtitle:
-          'Qty: ${sale.quantity} • Commission: ${NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0).format(sale.commission)}',
+          'Qty: ${sale.quantity} • Profit: ${NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0).format(sale.commission)}',
       trailing: NumberFormat.currency(
         symbol: 'UGX ',
         decimalDigits: 0,
@@ -203,14 +203,14 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       ),
       DetailRow(label: 'Quantity', value: sale.quantity.toString()),
       DetailRow(
-        label: 'Commission',
+        label: 'Profit',
         value: NumberFormat.currency(
           symbol: 'UGX ',
           decimalDigits: 0,
         ).format(sale.commission),
       ),
       DetailRow(
-        label: 'Commission Status',
+        label: 'Profit Status',
         value: sale.commissionPaid ? 'Paid' : 'Unpaid',
       ),
       if (sale.supplierName?.isNotEmpty ?? false)

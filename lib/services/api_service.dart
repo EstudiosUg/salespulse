@@ -238,10 +238,35 @@ class ApiService {
         }
       } else {
         final data = json.decode(response.body);
+
+        // Handle validation errors (422)
+        if (response.statusCode == 422 && data['errors'] != null) {
+          final errors = data['errors'] as Map<String, dynamic>;
+
+          // Check for specific field errors
+          if (errors['email'] != null) {
+            final emailErrors = errors['email'] as List;
+            throw Exception(emailErrors.first.toString());
+          }
+          if (errors['phone_number'] != null) {
+            final phoneErrors = errors['phone_number'] as List;
+            throw Exception(phoneErrors.first.toString());
+          }
+
+          // Get first error from any field
+          final firstError = errors.values.first;
+          if (firstError is List && firstError.isNotEmpty) {
+            throw Exception(firstError.first.toString());
+          }
+        }
+
         throw Exception(
             data['message'] ?? 'Registration failed: ${response.statusCode}');
       }
     } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
       throw Exception('Error during registration: $e');
     }
   }

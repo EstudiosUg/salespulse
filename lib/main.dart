@@ -10,8 +10,8 @@ import 'screens/expenses_screen.dart';
 import 'screens/suppliers_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/signup_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/bottom_nav.dart';
 import 'services/notification_service.dart';
@@ -53,8 +53,8 @@ class MyApp extends ConsumerWidget {
       home: const AuthWrapper(),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
-        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignupScreen(),
         '/dashboard': (context) => const MainNavigation(),
       },
     );
@@ -72,6 +72,7 @@ class AuthWrapper extends ConsumerStatefulWidget {
 class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   bool _onboardingCompleted = false;
   bool _isLoading = true;
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
@@ -87,6 +88,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     setState(() {
       _onboardingCompleted = hasCompletedOnboarding;
       _isLoading = false;
+      _isInitialLoad = false;
     });
   }
 
@@ -105,8 +107,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
 
-    // Show loading while checking auth and onboarding status
-    if (authState.isLoading || _isLoading) {
+    // Show loading only during initial app load (not during login attempts)
+    if (_isLoading || _isInitialLoad) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -115,13 +117,13 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       return const OnboardingScreen();
     }
 
-    // Show main navigation if authenticated, otherwise show welcome screen
+    // Show main navigation if authenticated, otherwise show login screen
     if (authState.isAuthenticated) {
       // Request permissions in background when user is authenticated
       _requestPermissionsInBackground();
       return const MainNavigation();
     } else {
-      return const WelcomeScreen();
+      return const LoginScreen();
     }
   }
 }

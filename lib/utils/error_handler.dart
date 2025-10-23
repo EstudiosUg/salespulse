@@ -32,12 +32,6 @@ class ErrorHandler {
       return 'You don\'t have permission to perform this action.';
     }
 
-    // Validation errors
-    if (errorString.contains('422') ||
-        errorString.contains('validation failed')) {
-      return 'Invalid data. Please check your input and try again.';
-    }
-
     // Server errors
     if (errorString.contains('500') ||
         errorString.contains('502') ||
@@ -63,7 +57,21 @@ class ErrorHandler {
         .replaceAll('Failed to load', 'Unable to load')
         .replaceAll('Failed to create', 'Unable to create')
         .replaceAll('Failed to update', 'Unable to update')
-        .replaceAll('Failed to delete', 'Unable to delete');
+        .replaceAll('Failed to delete', 'Unable to delete')
+        .replaceAll('Error during registration', 'Registration failed');
+
+    // Simplify validation error messages
+    if (cleanMessage.toLowerCase().contains('email') &&
+        (cleanMessage.toLowerCase().contains('already') ||
+            cleanMessage.toLowerCase().contains('taken'))) {
+      return 'Email already registered';
+    }
+
+    if (cleanMessage.toLowerCase().contains('phone') &&
+        (cleanMessage.toLowerCase().contains('already') ||
+            cleanMessage.toLowerCase().contains('taken'))) {
+      return 'Phone number already used';
+    }
 
     // If the message is still too technical or contains "Exception", use a generic message
     if (cleanMessage.contains('Exception') ||
@@ -75,4 +83,3 @@ class ErrorHandler {
     return cleanMessage.trim();
   }
 }
-

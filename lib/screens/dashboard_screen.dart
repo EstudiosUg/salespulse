@@ -79,13 +79,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Mark Commission Paid'),
+        title: const Text('Mark Profit Paid'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-                'Are you sure you want to mark all commissions for $supplierName as paid?'),
+                'Are you sure you want to mark all profits for $supplierName as paid?'),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -119,7 +119,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total Commission:',
+                        'Total Profit:',
                         style: TextStyle(
                           color: colorScheme.onSurface.withAlpha(179),
                           fontSize: 12,
@@ -167,7 +167,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!mounted) return;
       SnackbarHelper.showInfo(
         context,
-        'Marking commissions as paid for $supplierName...',
+        'Marking profits as paid for $supplierName...',
       );
 
       // Get unpaid sales for this supplier
@@ -188,7 +188,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!mounted) return;
       SnackbarHelper.showSuccess(
         context,
-        'Successfully marked ${sales.length} commission(s) as paid for $supplierName',
+        'Successfully marked ${sales.length} profit(s) as paid for $supplierName',
       );
     } catch (error) {
       if (!mounted) return;
@@ -342,7 +342,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               color: colorScheme.error,
             ),
             OverviewCard(
-              title: 'Paid Commission',
+              title: 'Paid Profit',
               amount: totalCommission,
               icon: Icons.account_balance_rounded,
               color: colorScheme.tertiary,
@@ -519,7 +519,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Unpaid Commissions',
+                  'Unpaid Profits',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: colorScheme.primary,

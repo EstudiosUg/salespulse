@@ -106,13 +106,13 @@ Future<void> showModernAddSaleDialog(
                         const SizedBox(height: 16),
                         ModernTextField(
                           controller: commissionController,
-                          label: 'Commission',
+                          label: 'Profit',
                           icon: Icons.percent,
                           keyboardType: TextInputType.number,
                           suffix: 'UGX',
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter commission';
+                              return 'Please enter profit';
                             }
                             if (double.tryParse(value) == null) {
                               return 'Please enter a valid number';
@@ -172,7 +172,7 @@ Future<void> showModernAddSaleDialog(
                         ),
                         const SizedBox(height: 16),
                         SwitchListTile(
-                          title: const Text('Commission Paid'),
+                          title: const Text('Profit Paid'),
                           value: isCommissionPaid,
                           onChanged: (value) {
                             setState(() => isCommissionPaid = value);
@@ -350,13 +350,13 @@ Future<void> showModernEditSaleDialog(
                         const SizedBox(height: 16),
                         ModernTextField(
                           controller: commissionController,
-                          label: 'Commission',
+                          label: 'Profit',
                           icon: Icons.percent,
                           keyboardType: TextInputType.number,
                           suffix: 'UGX',
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter commission';
+                              return 'Please enter profit';
                             }
                             if (double.tryParse(value) == null) {
                               return 'Please enter a valid number';
@@ -416,7 +416,7 @@ Future<void> showModernEditSaleDialog(
                         ),
                         const SizedBox(height: 16),
                         SwitchListTile(
-                          title: const Text('Commission Paid'),
+                          title: const Text('Profit Paid'),
                           value: isCommissionPaid,
                           onChanged: (value) {
                             setState(() => isCommissionPaid = value);

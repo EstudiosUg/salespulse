@@ -537,7 +537,7 @@ class _TransactionHistoryScreenState
       title: sale.productName,
       subtitle: _dateFormatter.format(sale.saleDate),
       secondarySubtitle:
-          'Qty: ${sale.quantity} • Commission: ${_currencyFormatter.format(sale.commission)}',
+          'Qty: ${sale.quantity} • Profit: ${_currencyFormatter.format(sale.commission)}',
       trailing: _currencyFormatter.format(sale.totalAmount),
       statusBadge: StatusBadge(
         label: sale.commissionPaid ? 'Paid' : 'Unpaid',
@@ -584,11 +584,11 @@ class _TransactionHistoryScreenState
       ),
       DetailRow(label: 'Quantity', value: sale.quantity.toString()),
       DetailRow(
-        label: 'Commission',
+        label: 'Profit',
         value: _currencyFormatter.format(sale.commission),
       ),
       DetailRow(
-        label: 'Commission Status',
+        label: 'Profit Status',
         value: sale.commissionPaid ? 'Paid' : 'Unpaid',
       ),
       if (sale.supplierName?.isNotEmpty ?? false)

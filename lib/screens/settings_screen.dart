@@ -821,10 +821,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       await ref.read(authNotifierProvider.notifier).logout();
       if (mounted) {
-        // Navigate to welcome screen
+        // Navigate to login screen
         Navigator.of(
           context,
-        ).pushNamedAndRemoveUntil('/welcome', (route) => false);
+        ).pushNamedAndRemoveUntil('/login', (route) => false);
       }
     }
   }
@@ -1029,12 +1029,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (mounted) {
           SnackbarHelper.showSuccess(context, 'Account deleted successfully');
 
-          // Navigate to login after a short delay
+          // Navigate to signup after a short delay
           await Future.delayed(const Duration(milliseconds: 500));
           if (mounted) {
             Navigator.of(
               context,
-            ).pushNamedAndRemoveUntil('/welcome', (route) => false);
+            ).pushNamedAndRemoveUntil('/signup', (route) => false);
           }
         }
       } catch (error) {
